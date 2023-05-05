@@ -7,13 +7,12 @@ import cv2
 
 import numpy as np
 
-import random
-
 import time
 
-import os
+from os import sys
 
-import math
+# Import custom Target class
+from target import Target
 
 
 pygame.init()
@@ -49,68 +48,6 @@ circle = None
 
 
 
-# Class of main game sprite, the target circle
-class Circle(pygame.sprite.Sprite):
-    def __init__(self, y_min, y_max):
-        # Inherit Sprite class
-        super().__init__()
-
-        # Loading in minimum and maximum circle distance from the drone's front, (y)
-        self.y_min = y_min
-        self.y_max = y_max
-
-        y_distance = random.randint(y_min, y_max)
-
-        # Get px per cm at randomly picked y distance
-        pixelsInCm = WINDOW_WIDTH/((1.04743*y_distance)+0.334229)
-
-        # Calc max values for x and z, so circle is initialy visable on screen
-        self.x_max = int((WINDOW_WIDTH/2) / pixelsInCm)
-        self.z_max = int((WINDOW_HEIGHT/2) / pixelsInCm)
-
-        # This distance is relative to drone, stored in 'kinda should be cm' units
-        self.distance = (random.randint(-self.x_max, self.x_max), y_distance, random.randint(-self.z_max, self.z_max))
-
-        self.cmRadius = 2
-
-        # CALC at update() and/or draw()
-
-        # Derived px radius, concidering distance-scale
-        self.pxRadius =  0
-
-        # An (x, z) point in px, to display circle on fpv frame, centered
-        self.display_center = (0, 0)
-
-
-    def update(self, x_velocity, y_velocity, z_velocity, degree):
-
-        pixelsInCm = WINDOW_WIDTH/((1.04743*self.distance[1])+0.334229)
-        self.pxRadius = pixelsInCm * self.cmRadius
-
-        # Proudly Alexander Kashpir© technology
-        sector_width = 2*(self.distance[1] + y_velocity)*(math.sin(math.radians(degree)/2))
-        sector_height = self.distance[1]- math.sqrt((self.distance[1]*self.distance[1])-((sector_width/2)*(sector_width/2)))
-
-        # Update to new relative distance
-        self.distance = (self.distance[0] + x_velocity-sector_width, self.distance[1] + y_velocity-sector_height, self.distance[2] + z_velocity)
-
-        # If the drone is really close to the target circle, score a point,
-        # relocate target
-        if (self.distance[1] > -15 and self.distance[1] < 15) and (self.distance[2] > -15 and self.distance[2] < 15) and (self.distance[0] > -15 and self.distance[0] < 15):
-            global score
-            score += 1
-            self.distance = (random.randint(-self.x_max, self.x_max), random.randint(self.y_min, self.y_max), random.randint(-self.z_max, self.z_max))
-    def draw(self, surface):
-        pixelsInCm = WINDOW_WIDTH/((1.04743*self.distance[1])+0.334229)
-        distance_x = (pixelsInCm * self.distance[0]) + (WINDOW_WIDTH/2) - (self.pxRadius/2)
-        distance_y = (pixelsInCm * self.distance[2]) + (WINDOW_HEIGHT/2) - (self.pxRadius/2)
-        self.display_center = (distance_x, distance_y)
-        pygame.draw.circle(surface, (255,0,0), (distance_x, distance_y), self.pxRadius)
-
-
-
-
-
 
 while True:
     success, frame = cap.read()
@@ -123,13 +60,13 @@ while True:
     frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
     frame = cv2.flip(frame, 1)
 
-    if drone.is_flying:
-        # Wait a bit for the drone to stabilize
-        time.sleep(2)
+    if drone.is_flying and calibration_delay < 150:
+        calibration_delay += 1
 
+    if calibration_delay > 149:
         # If no target is present, create one
         if not circle:
-            circle = Circle(10, 60)
+            circle = Target(10, 60)
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         kps, des = orb.detectAndCompute(gray, None)
