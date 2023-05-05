@@ -24,11 +24,11 @@ class Target(Sprite):
         y_distance = random.randint(self.y_min, self.y_max)
 
         # Calc px per cm at the y distance
-        pixelsInCm = WINDOW_WIDTH / (1.04743*y_distance+0.334229)
+        pixels_in_cm = WINDOW_WIDTH / (1.04743*y_distance+0.334229)
 
         # Calc max x and z distance, so circle is initialy visable on screen after centering
-        self.x_max = int(WINDOW_WIDTH / 2) / pixelsInCm
-        self.z_max = int(WINDOW_HEIGHT / 2) / pixelsInCm
+        self.x_max = int(WINDOW_WIDTH / 2) / pixels_in_cm
+        self.z_max = int(WINDOW_HEIGHT / 2) / pixels_in_cm
 
         # Target distance (cm) is relative to drone
         self.distance = (random.randint(0, self.x_max), y_distance, random.randint(0, self.z_max))
@@ -46,19 +46,18 @@ class Target(Sprite):
 
 
     def update(self, x_displacement, y_displacement, z_displacement, turn_degree):
+        # Update relative distance from displacments (cm)
+        self.distance = (self.distance[0] + x_displacement, self.distance[1], self.distance[2] + z_displacement)
+
         # self.distance[1] is the y distance
-        pixelsInCm = WINDOW_WIDTH / (1.04743*self.distance[1]+0.334229)
+        pixels_in_cm = WINDOW_WIDTH / (1.04743*self.distance[1]+0.334229)
 
         # Re-calc px radius based on new px per cm count
-        self.px_radius = pixelsInCm * self.cm_radius
+        self.px_radius = pixels_in_cm * self.cm_radius
 
         # Stop shrinking px radius if target is over 220 cm away
         if self.px_radius < 8:
             self.px_radius = 8
-
-        # Update relative distance from displacments (cm)
-        self.distance = (self.distance[0] + x_displacement, self.distance[1] + y_displacement, self.distance[2] + z_displacement)
-
 
         # Compensate for turning:
 
@@ -82,18 +81,18 @@ class Target(Sprite):
 
 
     def draw(self, surface):
-        pixelsInCm = WINDOW_WIDTH / (1.04743*self.distance[1]+0.334229)
+        pixels_in_cm = WINDOW_WIDTH / (1.04743*self.distance[1]+0.334229)
 
         # Convert x & z distance to px and display relative to screen center (drone position)
         # This is because when self.distance = [0, 0, 0],
         #   ...target should be in the center of screen,
         #   ...where the drone's camera center is,
         #   ...rather than in the top left corner of the pygame window
-        x_screen_point = pixelsInCm * self.distance[0] + WINDOW_WIDTH / 2
-        z_screen_point = pixelsInCm * self.distance[2] + WINDOW_HEIGHT / 2
+        x_screen_point = pixels_in_cm * self.distance[0] + WINDOW_WIDTH / 2
+        z_screen_point = pixels_in_cm * self.distance[2] + WINDOW_HEIGHT / 2
 
         # Update display_center (x, z) tuple
         self.display_center = (x_screen_point, z_screen_point)
 
         # Draw the target on provided surface (current frame)
-        pygame.draw.circle(surface, self.color, self.display_center, self.px_radius)
+        circle(surface, self.color, self.display_center, self.px_radius)

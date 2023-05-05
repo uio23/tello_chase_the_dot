@@ -18,21 +18,34 @@ from target import Target
 pygame.init()
 
 
-# Connect Tello drone
+# Initialize Tello drone
 drone = Tello()
 drone.connect()
 drone.streamon()
 
 
-# Set global variables
+# Pygame window parameters
 WINDOW_WIDTH = 960
 WINDOW_HEIGHT = 720
 WINDOW_SIZE = (WINDOW_WIDTH, WINDOW_HEIGHT)
+WINDOW_NAME = 'Chase the Dot'
 
+# Derived experimentally (d°/s)
+DRONE_ROTATION_SPEED = 62.07
+
+# Game score
 score = 0
 
+
+# Initialize cv2 objects
+
+# Capture video from drone's udp port
 cap = cv2.VideoCapture(drone.get_udp_video_address())
+
+# ORB feature detection alg. -> speed + accuracy
 orb = cv2.ORB_create()
+
+# Define matching algorythm
 bruite_force_matcher = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
 
 dronePosition = np.zeros((3, 1))
@@ -40,15 +53,34 @@ droneRotation = np.eye(3)
 prev_des = None
 old_pos = [0, 0, 0, 0]
 
+# Set up pygame variables
 font = pygame.font.Font(pygame.font.get_default_font(), 36)
 screen = pygame.display.set_mode(WINDOW_SIZE)
+pygame.display.set_caption(WINDOW_NAME)
 clock = pygame.time.Clock()
 
+# target object is empty untill take-off
 circle = None
 
 
+def calculate_rotation_degree() -> float:
+    '''
+        Use FPS avarage & tello's rotation speed to determine precise
+        rotation in degrees
+    '''
+
+    # Get fps avarage from clock, only works in game loop
+    fps = clock.get_fps()
+
+    # Convert second-fraction to milliseconds
+    time_interval = 1/fps * 1000
+
+    rotation_degree = ROTATION_SPEED * time_interval
+
+    return rotation_degree
 
 
+# Game-loop
 while True:
     success, frame = cap.read()
 
@@ -91,6 +123,7 @@ while True:
             img_surface = pygame.surfarray.make_surface(frame)
             yaw = 0
 
+        # Record current frame features for comparison
         prev_kps = kps
         prev_des = des
         prev_frame = frame
@@ -110,11 +143,10 @@ while True:
         elif keys[pygame.K_s]:
             velocity[2] = -20
         if keys[pygame.K_d]:
-            velocity[3] = 20
+            velocity[3] = 360
         elif keys[pygame.K_a]:
-            velocity[3] = -20
+            velocity[3] = -360
         drone.send_rc_control(velocity[0], velocity[1], velocity[2], velocity[3])
-
     else:
         img_surface = pygame.surfarray.make_surface(frame)
     for event in pygame.event.get():
@@ -158,8 +190,9 @@ while True:
 
 
         # Update target circle's position proportional to
-        # (x & z) frame displacment and (y & d) velocity
-        circle.update(pos[1]/4, -velocity[1]/20, pos[0]/4, velocity[3]/20)
+        # (x & z) frame displacment, y velocity and calculated d
+        rotation_degree = calculate_rotation_degree()
+        circle.update(pos[1]/4, -velocity[1]/20, pos[0]/4, rotation_degree)
 
         # Render HUD
         x_distance_display = font.render(f'X - distance: {round(circle.distance[0], 2)}', True, (0, 0, 250))
