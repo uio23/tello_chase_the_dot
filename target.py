@@ -2,10 +2,15 @@
 from pygame.sprite import Sprite
 from pygame.draw import circle
 
+import numpy as np
+
 import random
 
-# Import project constants
-from main import WINDOW_WIDTH, WINDOW_HEIGHT
+import math
+
+# Re-defining project constants to avoid circular-imports
+WINDOW_WIDTH = 960
+WINDOW_HEIGHT = 720
 
 
 class Target(Sprite):
@@ -27,11 +32,11 @@ class Target(Sprite):
         pixels_in_cm = WINDOW_WIDTH / (1.04743*y_distance+0.334229)
 
         # Calc max x and z distance, so circle is initialy visable on screen after centering
-        self.x_max = int(WINDOW_WIDTH / 2) / pixels_in_cm
-        self.z_max = int(WINDOW_HEIGHT / 2) / pixels_in_cm
+        self.x_max = int((WINDOW_WIDTH / 2) / pixels_in_cm)
+        self.z_max = int((WINDOW_HEIGHT / 2) / pixels_in_cm)
 
         # Target distance (cm) is relative to drone
-        self.distance = (random.randint(0, self.x_max), y_distance, random.randint(0, self.z_max))
+        self.distance = (random.randint(-self.x_max, self.x_max), y_distance, random.randint(-self.z_max, self.z_max))
 
         # The target is a circle, with a 2cm radius
         self.cm_radius = 2
@@ -44,10 +49,13 @@ class Target(Sprite):
         # An on screen (x, z) location coordinate, in px
         self.display_center = (0, 0)
 
+        # Game score
+        self.score = 0
+
 
     def update(self, x_displacement, y_displacement, z_displacement, turn_degree):
         # Update relative distance from displacments (cm)
-        self.distance = (self.distance[0] + x_displacement, self.distance[1], self.distance[2] + z_displacement)
+        self.distance = (self.distance[0] + x_displacement, self.distance[1] + y_displacement, self.distance[2] + z_displacement)
 
         # self.distance[1] is the y distance
         pixels_in_cm = WINDOW_WIDTH / (1.04743*self.distance[1]+0.334229)
@@ -73,11 +81,12 @@ class Target(Sprite):
         # If drone is close to target:
         # criteria - (-15<x<15) (-15<y<15) (-15<z<15)
         if (self.distance[1] > -15 and self.distance[1] < 15) and (self.distance[2] > -15 and self.distance[2] < 15) and (self.distance[0] > -15 and self.distance[0] < 15):
-            global score
             # score 1 point
-            score += 1
+            self.score += 1
             # relocate target
             self.distance = (random.randint(-self.x_max, self.x_max), random.randint(self.y_min, self.y_max), random.randint(-self.z_max, self.z_max))
+            # new color
+            self.color = tuple(np.random.choice(range(256), size=3))
 
 
     def draw(self, surface):

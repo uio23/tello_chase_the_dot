@@ -31,10 +31,7 @@ WINDOW_SIZE = (WINDOW_WIDTH, WINDOW_HEIGHT)
 WINDOW_NAME = 'Chase the Dot'
 
 # Derived experimentally (d°/s)
-DRONE_ROTATION_SPEED = 62.07
-
-# Game score
-score = 0
+DRONE_YAW_SPEED = 10.35
 
 
 # Initialize cv2 objects
@@ -63,7 +60,7 @@ clock = pygame.time.Clock()
 circle = None
 
 
-def calculate_rotation_degree() -> float:
+def calculate_yaw_degree() -> float:
     '''
         Use FPS avarage & tello's rotation speed to determine precise
         rotation in degrees
@@ -72,17 +69,20 @@ def calculate_rotation_degree() -> float:
     # Get fps avarage from clock, only works in game loop
     fps = clock.get_fps()
 
-    # Convert second-fraction to milliseconds
-    time_interval = 1/fps * 1000
+    time_interval = 1 / fps
 
-    rotation_degree = ROTATION_SPEED * time_interval
+    yaw_degree = DRONE_YAW_SPEED * time_interval
 
-    return rotation_degree
+    yaw_degree = yaw_degree * 0.7
 
+    return yaw_degree
+
+calibration_delay = 0
 
 # Game-loop
 while True:
     success, frame = cap.read()
+    yaw_degree = 0
 
     if not success:
         break
@@ -143,9 +143,11 @@ while True:
         elif keys[pygame.K_s]:
             velocity[2] = -20
         if keys[pygame.K_d]:
-            velocity[3] = 360
+            velocity[3] = 60
+            yaw_degree = calculate_yaw_degree()
         elif keys[pygame.K_a]:
-            velocity[3] = -360
+            velocity[3] = -60
+            yaw_degree = calculate_yaw_degree()
         drone.send_rc_control(velocity[0], velocity[1], velocity[2], velocity[3])
     else:
         img_surface = pygame.surfarray.make_surface(frame)
@@ -165,7 +167,7 @@ while True:
                 frame = cv2.flip(frame, 1)
                 timestr = time.strftime('%H-%M', time.localtime())
                 cv2.imwrite(f'./images/Tello-{timestr}.jpg', frame)
-                pygame.image.save(screen, f'./images/Game-{timestr}.jepg')
+                pygame.image.save(screen, f'./images/Game-{timestr}.jpeg')
             elif event.key == pygame.K_i:
                 print(f'\nBattery: {drone.get_battery}\n')
 
@@ -191,15 +193,14 @@ while True:
 
         # Update target circle's position proportional to
         # (x & z) frame displacment, y velocity and calculated d
-        rotation_degree = calculate_rotation_degree()
-        circle.update(pos[1]/4, -velocity[1]/20, pos[0]/4, rotation_degree)
+        circle.update(pos[1]/4, -velocity[1]/20, pos[0]/4, yaw_degree)
 
         # Render HUD
         x_distance_display = font.render(f'X - distance: {round(circle.distance[0], 2)}', True, (0, 0, 250))
         y_distance_display = font.render(f'Y - distance: {round(circle.distance[1], 2)}', True, (0, 0, 250))
         z_distance_display = font.render(f'Z - distance: {round((circle.distance[2]*-1), 2)}', True, (0, 0, 250))
 
-        score_display = font.render(f'Score: {score}', True, (0, 250, 0))
+        score_display = font.render(f'Score: {circle.score}', True, (0, 250, 0))
 
 
         # Blit HUD
