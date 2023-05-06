@@ -1,9 +1,9 @@
 # Chase the Dot!
-### An AR game where you try fly to virtual targets and score points.
+##### An AR game where you try fly to virtual targets and score points.
 If you happen to own a Tello drone, please do download an have a go playing yourself
 
 ***
-##### Controls:
+### Controls:
 **up arrow**: Forwards  
 **down arrow**: Backwards  
 **right arrow**: Right  
@@ -18,5 +18,10 @@ If you happen to own a Tello drone, please do download an have a go playing your
 
 **p key**: Screenshot  
 ***
+Simply
+``pip3 install -r requirements.txt``
+Then,
+``python3 main.py``
+And you're ready to go!
 
 *Note: Still in development*
