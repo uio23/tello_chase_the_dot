@@ -18,10 +18,16 @@ If you happen to own a Tello drone, please do download an have a go playing your
 
 **p key**: Screenshot  
 ***
-Simply  
+Simply connect to your Tello
+
+Then navigate to the project folder and run  
+
 ``pip3 install -r requirements.txt``  
+
 Then,  
+
 ``python3 main.py``  
+
 And you're ready to go!
 
 *Note: Still in development*
