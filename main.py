@@ -22,13 +22,13 @@ WINDOW_SIZE = (WINDOW_WIDTH, WINDOW_HEIGHT)
 WINDOW_NAME = 'Chase the Dot'
 
 # Derived experimentally (d°/s)
-DRONE_YAW_SPEED = 10.35
+DRONE_YAW_SPEED = 36.5
 
 # Use to store x & z displacment from frame-shift
 drone_x_z_change = [0, 0]
 
 # Use as ~2s buffer before starting game after take-off
-CALIBRATION_DELAY = 150
+CALIBRATION_DELAY = 200
 delayed = 0
 
 # target doesn't exist untill flying
@@ -74,8 +74,6 @@ def calculate_yaw_degree() -> float:
 
     yaw_degree = DRONE_YAW_SPEED * time_interval
 
-    yaw_degree = yaw_degree * 0.7
-
     return yaw_degree
 
 
@@ -94,7 +92,7 @@ while True:
 
 
     # Execute ~2s buffer
-    if drone.is_flying and delayed < 150:
+    if drone.is_flying and delayed < CALIBRATION_DELAY:
         delayed += 1
     # The game is active
     if delayed >= CALIBRATION_DELAY:
@@ -143,7 +141,7 @@ while True:
             yaw_degree = calculate_yaw_degree()
         elif keys[pygame.K_a]:
             velocity[3] = -60
-            yaw_degree = calculate_yaw_degree()
+            yaw_degree = -1 * calculate_yaw_degree()
         else:
             yaw_degree = 0
         drone.send_rc_control(velocity[0], velocity[1], velocity[2], velocity[3])
@@ -174,13 +172,17 @@ while True:
 
     if target:
         # Update target target's position proportional to
-        # (x & z) frame displacment, y velocity and calculated d
-        target.update(drone_x_z_change[1]/4, -velocity[1]/20, drone_x_z_change[0]/4, yaw_degree)
+        # (x & z) frame displacment and y velocity
+        if yaw_degree == 0:
+            target.update(drone_x_z_change[0]/10, -velocity[1]/25, drone_x_z_change[1]/10)
+        # Ignore frame-shift if rotating (yaw)
+        else:
+            target.update(0, -velocity[1]/25, 0)
 
         # Render HUD
         x_distance_display = font.render(f'X - distance: {round(target.distance[0], 2)}', True, (0, 0, 250))
         y_distance_display = font.render(f'Y - distance: {round(target.distance[1], 2)}', True, (0, 0, 250))
-        z_distance_display = font.render(f'Z - distance: {round((target.distance[2]*-1), 2)}', True, (0, 0, 250))
+        z_distance_display = font.render(f'Z - distance: {round(target.distance[2], 2)}', True, (0, 0, 250))
 
         score_display = font.render(f'Score: {target.score}', True, (0, 250, 0))
 
@@ -192,7 +194,7 @@ while True:
         screen.blit(score_display, dest=(800,10))
 
         # Blit target
-        target.draw(screen)
+        target.draw(screen, yaw_degree)
 
 
     # Update the whole display and limit frame-rate
