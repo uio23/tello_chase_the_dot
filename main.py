@@ -22,7 +22,8 @@ WINDOW_SIZE = (WINDOW_WIDTH, WINDOW_HEIGHT)
 WINDOW_NAME = 'Chase the Dot'
 
 # Derived experimentally (d°/s)
-DRONE_YAW_SPEED = 36.5
+DRONE_YAW_SPEED = 40
+yaw_degree = 0
 
 # Use to store x & z displacment from frame-shift
 drone_x_z_change = [0, 0]
@@ -74,8 +75,9 @@ def calculate_yaw_degree() -> float:
 
     yaw_degree = DRONE_YAW_SPEED * time_interval
 
+    # Alternative for reality-based calculations
+    # return 1.382
     return yaw_degree
-
 
 
 # Game-loop
@@ -109,10 +111,14 @@ while True:
 
             dx = np.mean([kps[match.queryIdx].pt[0] - prev_kps[match.trainIdx].pt[0] for match in matches])
             dz = np.mean([kps[match.queryIdx].pt[1] - prev_kps[match.trainIdx].pt[1] for match in matches])
-            drone_x_z_change = [dx, dz]
+            if yaw_degree == 0:
+                drone_x_z_change = [dx, dz]
+            else:
+                drone_x_z_change = [0, 0]
 
-            match_img = cv2.drawMatches(frame, kps, prev_frame, prev_kps, matches, None)
-            img_surface = pygame.surfarray.make_surface(match_img)
+                match_img = cv2.drawMatches(frame, kps, prev_frame, prev_kps, matches, None)
+                img_surface = pygame.surfarray.make_surface(match_img)
+            img_surface = pygame.surfarray.make_surface(frame)
         else:
             img_surface = pygame.surfarray.make_surface(frame)
             yaw = 0
@@ -173,11 +179,8 @@ while True:
     if target:
         # Update target target's position proportional to
         # (x & z) frame displacment and y velocity
-        if yaw_degree == 0:
-            target.update(drone_x_z_change[0]/10, -velocity[1]/25, drone_x_z_change[1]/10)
-        # Ignore frame-shift if rotating (yaw)
-        else:
-            target.update(0, -velocity[1]/25, 0)
+        target.update(drone_x_z_change[1]/10, -velocity[1]/40, drone_x_z_change[0]/10)
+
 
         # Render HUD
         x_distance_display = font.render(f'X - distance: {round(target.distance[0], 2)}', True, (0, 0, 250))

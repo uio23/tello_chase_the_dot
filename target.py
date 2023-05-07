@@ -87,15 +87,20 @@ class Target(Sprite):
 
         # Preform visual adjustment on yaw rotation
         if turn_degree != 0:
-            self.yaw_x_visual_adjustment += self.distance[1] * px_in_cm * math.cos(math.radians(turn_degree)) - self.distance[1] * px_in_cm
-
+            if turn_degree < 0:
+                negative = -1
+            else:
+                negative = 1
+            self.yaw_x_visual_adjustment += (self.distance[1] * math.cos(math.radians(turn_degree)) - self.distance[1]) * negative
+        print(self.yaw_x_visual_adjustment)
+        print(turn_degree)
         # Convert x & z distance to px and display relative to screen center (drone position)
         # This is because when self.distance = [0, 0, 0],
         #   ...target should be in the center of screen,
         #   ...where the drone's camera center is,
         #   ...rather than in the top left corner of the pygame window
 
-        x_screen_point = px_in_cm * self.distance[0] + self.yaw_x_visual_adjustment + WINDOW_WIDTH / 2
+        x_screen_point = px_in_cm * (self.distance[0] + self.yaw_x_visual_adjustment) + WINDOW_WIDTH / 2
         z_screen_point = px_in_cm * self.distance[2] + WINDOW_HEIGHT / 2
 
         # Update display_center (x, z) tuple
