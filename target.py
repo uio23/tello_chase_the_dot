@@ -41,8 +41,6 @@ class Target(Sprite):
         # The target is a circle, with a 2cm radius
         self.cm_radius = 2
 
-        # Calculated when necessary
-
         # Radius in px, derived from y distance
         self.px_radius =  0
 
@@ -65,12 +63,6 @@ class Target(Sprite):
         # Update relative distance from displacments (cm)
         self.distance = (self.distance[0] + x_displacement, self.distance[1] + y_displacement, self.distance[2] + z_displacement)
 
-        # self.distance[1] is the y distance
-        px_in_cm = self.get_px_in_cm(self.distance[1])
-
-        # Re-calc px radius based on new px per cm value
-        self.px_radius = px_in_cm * self.cm_radius
-
         # If drone is close to target:
         # criteria (-15<x<15) (-15<y<15) (-15<z<15)
         if (self.distance[1] > -15 and self.distance[1] < 15) and (self.distance[2] > -15 and self.distance[2] < 15) and (self.distance[0] > -15 and self.distance[0] < 15):
@@ -82,24 +74,20 @@ class Target(Sprite):
             self.color = tuple(np.random.choice(range(256), size=3))
 
 
-    def draw(self, surface, turn_degree):
+    def draw(self, surface, yaw_degree):
         px_in_cm = self.get_px_in_cm(self.distance[1])
 
-        # Preform visual adjustment on yaw rotation
-        if turn_degree != 0:
-            if turn_degree < 0:
-                negative = -1
-            else:
-                negative = 1
-            self.yaw_x_visual_adjustment += (self.distance[1] * math.cos(math.radians(turn_degree)) - self.distance[1]) * negative
-        print(self.yaw_x_visual_adjustment)
-        print(turn_degree)
+        # Re-calc px radius based on new px per cm value
+        self.px_radius = px_in_cm * self.cm_radius
+
+        # Calc visual adjustment on yaw rotation
+        self.yaw_x_visual_adjustment += (self.distance[1] * math.cos(math.radians(yaw_degree)) - self.distance[1]) * (1 if yaw_degree >= 0 else -1)
+
         # Convert x & z distance to px and display relative to screen center (drone position)
         # This is because when self.distance = [0, 0, 0],
         #   ...target should be in the center of screen,
         #   ...where the drone's camera center is,
         #   ...rather than in the top left corner of the pygame window
-
         x_screen_point = px_in_cm * (self.distance[0] + self.yaw_x_visual_adjustment) + WINDOW_WIDTH / 2
         z_screen_point = px_in_cm * self.distance[2] + WINDOW_HEIGHT / 2
 
